@@ -1,0 +1,40 @@
+name: Build and Deploy AKS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Login Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login ACR
+      run: |
+        echo ${{ secrets.ACR_PASSWORD }} | docker login carlos69lamejor.azurecr.io -u ${{ secrets.ACR_USERNAME }} --password-stdin
+
+    - name: Build & Push Images
+      run: |
+        docker build -t carlos69lamejor.azurecr.io/app1:v1 ./app/app1
+        docker push carlos69lamejor.azurecr.io/app1:v1
+
+        docker build -t carlos69lamejor.azurecr.io/app2:v1 ./app/app2
+        docker push carlos69lamejor.azurecr.io/app2:v1
+
+        docker build -t carlos69lamejor.azurecr.io/app3:v1 ./app/app3
+        docker push carlos69lamejor.azurecr.io/app3:v1
+
+    - name: Get AKS Credentials
+      run: az aks get-credentials --resource-group rg-k8s-lab4 --name aks-lab --overwrite-existing
+
+    - name: Deploy to AKS
+      run: kubectl apply -f app/k8s/
